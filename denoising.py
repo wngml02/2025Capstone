@@ -75,15 +75,3 @@ sio.savemat("denoised_imag.mat", {"denoised_imag": denoised_imag_all})
 
 
 print("저장 완료!")
-
-# 4. napari 시각화
-viewer = napari.Viewer()
-
-for c in range(6):
-    real_d = np.transpose(denoised_real_all[:, :, :, c], (2, 0, 1))
-    imag_d = np.transpose(denoised_imag_all[:, :, :, c], (2, 0, 1))
-
-    viewer.add_image(real_d.astype(np.float32), name=f"Denoised Real {c}", colormap="gray", opacity=0.8)
-    viewer.add_image(imag_d.astype(np.float32), name=f"Denoised Imag {c}", colormap="gray", opacity=0.8)
-
-napari.run()
