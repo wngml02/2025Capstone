@@ -1,2 +1,5 @@
 meas_gre_dir1.mat
 noisy_meas_gre_dir1.mat
+denoised_imag.mat
+denoised_real.mat
+denoised_magnitude_all.mat

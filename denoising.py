@@ -70,6 +70,12 @@ def mppca_denoise_4d(data, patch_size=5):
 denoised_real_all = mppca_denoise_4d(noisy_real_all, patch_size=5)
 denoised_imag_all = mppca_denoise_4d(noisy_imag_all, patch_size=5)
 
+sio.savemat("denoised_real.mat", {"denoised_real": denoised_real_all})
+sio.savemat("denoised_imag.mat", {"denoised_imag": denoised_imag_all})
+
+
+print("저장 완료!")
+
 # 4. napari 시각화
 viewer = napari.Viewer()
 
