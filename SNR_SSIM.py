@@ -5,8 +5,8 @@ from skimage.metrics import structural_similarity as ssim
 
 # 1. noisy + denoised 데이터 불러오기
 noisy_mat = sio.loadmat("noisy_meas_gre_dir1.mat")
-den_real = sio.loadmat("denoised_real.mat")
-den_imag = sio.loadmat("denoised_imag.mat")
+den_real = sio.loadmat("denoised_real_dipy.mat")
+den_imag = sio.loadmat("denoised_imag_dipy.mat")
 
 noisy_real_all = noisy_mat["noisy_real"]
 noisy_imag_all = noisy_mat["noisy_imag"]
