@@ -31,7 +31,9 @@ sio.savemat("denoised_real_dipy_final.mat", {"denoised_real": den_real})
 sio.savemat("denoised_imag_dipy_final.mat", {"denoised_imag": den_imag})
 
 # magnitude & napari
-mag = np.abs(den_real + 1j*den_imag)
+mag = np.abs(den_real + 1j * den_imag)
+sio.savemat("denoised_magnitude_dipy_final.mat", {"denoised_magnitude": mag})
+
 viewer = napari.Viewer()
 for c in tqdm(range(mag.shape[-1]), desc="Show ch", ncols=80):
     viewer.add_image(np.transpose(mag[..., c], (2,0,1)).astype(np.float32),

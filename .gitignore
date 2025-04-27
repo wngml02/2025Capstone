@@ -8,3 +8,6 @@ denoised_real_dipy.mat
 denoised_magnitude_dipy.mat
 noisy_imag_only.mat
 noisy_real_only.mat
+denoised_imag_dipy_final.mat
+denoised_real_dipy_final.mat
+denoised_magnitude_dipy_final.mat
