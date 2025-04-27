@@ -6,3 +6,5 @@ denoised_magnitude_all.mat
 denoised_imag_dipy.mat
 denoised_real_dipy.mat
 denoised_magnitude_dipy.mat
+noisy_imag_only.mat
+noisy_real_only.mat

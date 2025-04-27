@@ -1,49 +1,39 @@
+import time
 import warnings
 
 import napari
 import numpy as np
 import scipy.io as sio
 from dipy.denoise.localpca import mppca
-from dipy.segment.mask import median_otsu
+from tqdm import tqdm
 
-# 1. .mat 파일 로드
-mat_data = sio.loadmat("noisy_meas_gre_dir1.mat")
-noisy_real_all = mat_data["noisy_real"]
-noisy_imag_all = mat_data["noisy_imag"]
+mat_real = sio.loadmat("noisy_real_only.mat")
+real = mat_real["noisy_real"]          # (256,224,176,6)
+mat_imag = sio.loadmat("noisy_imag_only.mat")
+imag = mat_imag["noisy_imag"]
 
-print("Real shape:", noisy_real_all.shape)
-print("Imag shape:", noisy_imag_all.shape)
+def denoise_slices(data, label, r=2):
+    X, Y, Z, N = data.shape
+    out = np.zeros_like(data)
+    print(f"\n▶ {label}  slice-by-slice denoising (patch_radius={r})")
+    for z in tqdm(range(Z), desc=f"{label} slices", ncols=80):
+        slice4d = data[:, :, z, :][:, :, None, :]          # (X,Y,1,N)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            d_slice = mppca(slice4d, patch_radius=r)
+        out[:, :, z, :] = d_slice[:, :, 0, :]
+    return np.nan_to_num(out)
 
-# 2. 마스크 생성 (채널 0 기준으로)
-_, mask = median_otsu(noisy_real_all[:, :, :, 0], vol_idx=None, numpass=1)
+den_real = denoise_slices(real, "Real")
+den_imag = denoise_slices(imag, "Imag")
 
-# 3. DIPY MP-PCA 적용 (real / imag 각각)
-def dipy_mppca_denoise(data, patch_radius=2, mask=None):
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=RuntimeWarning)
-        result = mppca(data, patch_radius=patch_radius, mask=mask)
-    result = np.nan_to_num(result)  # NaN 방지
-    return result
+sio.savemat("denoised_real_dipy_final.mat", {"denoised_real": den_real})
+sio.savemat("denoised_imag_dipy_final.mat", {"denoised_imag": den_imag})
 
-print("▶ DIPY MP-PCA denoising: real")
-denoised_real_all = dipy_mppca_denoise(noisy_real_all, patch_radius=2, mask=mask)
-
-print("▶ DIPY MP-PCA denoising: imag")
-denoised_imag_all = dipy_mppca_denoise(noisy_imag_all, patch_radius=2, mask=mask)
-
-# 4. 복소수 결합 및 magnitude 계산
-complex_denoised = denoised_real_all + 1j * denoised_imag_all
-magnitude_all = np.abs(complex_denoised)
-
-# 5. 저장
-sio.savemat("denoised_real_dipy.mat", {"denoised_real": denoised_real_all})
-sio.savemat("denoised_imag_dipy.mat", {"denoised_imag": denoised_imag_all})
-sio.savemat("denoised_magnitude_dipy.mat", {"denoised_magnitude": magnitude_all})
-print("저장 완료!")
-
-# 6. 시각화 (선택)
+# magnitude & napari
+mag = np.abs(den_real + 1j*den_imag)
 viewer = napari.Viewer()
-for c in range(magnitude_all.shape[-1]):
-    slice_ = np.transpose(magnitude_all[:, :, :, c], (2, 0, 1))
-    viewer.add_image(slice_.astype(np.float32), name=f"Magnitude {c}", colormap="gray")
+for c in tqdm(range(mag.shape[-1]), desc="Show ch", ncols=80):
+    viewer.add_image(np.transpose(mag[..., c], (2,0,1)).astype(np.float32),
+                    name=f"Mag {c}", colormap="gray", opacity=0.8)
 napari.run()
