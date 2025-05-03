@@ -2,40 +2,41 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.io as sio
 
-# 1. Load data
-mat_noisy_real = sio.loadmat("noisy_real_only.mat")
-mat_noisy_imag = sio.loadmat("noisy_imag_only.mat")
-noisy_real = mat_noisy_real["noisy_real"]
-noisy_imag = mat_noisy_imag["noisy_imag"]
+# 1. Load real/imag (DIPY-denoised)
+real = sio.loadmat("denoised_real_dipy_masked.mat")["denoised_real"]
+imag = sio.loadmat("denoised_imag_dipy_masked.mat")["denoised_imag"]
 
-mat_denoised_mag = sio.loadmat("denoised_magnitude_dipy_final.mat")
-denoised_mag = mat_denoised_mag["denoised_magnitude"]
+# 2. Load original noisy data for magnitude comparison
+noisy_real = sio.loadmat("noisy_real_only.mat")["noisy_real"]
+noisy_imag = sio.loadmat("noisy_imag_only.mat")["noisy_imag"]
 
-# 2. Calculate noisy magnitude
-noisy_mag = np.abs(noisy_real + 1j * noisy_imag)
+# 3. Load DIPY-denoised magnitude
+mag_denoised = sio.loadmat("denoised_magnitude_dipy_masked.mat")["denoised_magnitude"]
 
-# 3. Choose one slice (middle slice)
-Z = noisy_mag.shape[2] // 2
+# 4. Calculate noisy magnitude
+mag_noisy = np.abs(noisy_real + 1j * noisy_imag)
 
-# 4. Create figure
-n_channels = noisy_mag.shape[-1]
-n_cols = 2  # Noisy, Denoised
-n_rows = n_channels
+# 5. Choose mid-slice and channel
+Z = real.shape[2] // 2
+ch = 0  # first channel
 
-fig, axs = plt.subplots(n_rows, n_cols, figsize=(n_cols*4, n_rows*4))
+# 6. Slice data
+slices = [
+    real[:, :, Z, ch],
+    imag[:, :, Z, ch],
+    mag_noisy[:, :, Z, ch],
+    mag_denoised[:, :, Z, ch],
+]
+titles = ["Real (Denoised)", "Imaginary (Denoised)", "Noisy Magnitude", "Denoised Magnitude"]
 
-# 5. Fill plots
-for c in range(n_channels):
-    noisy_slice = noisy_mag[:, :, Z, c]
-    denoised_slice = denoised_mag[:, :, Z, c]
-    
-    axs[c, 0].imshow(noisy_slice, cmap='gray')
-    axs[c, 0].axis('off')
-    axs[c, 0].set_title(f"Ch {c}: Noisy")
-
-    axs[c, 1].imshow(denoised_slice, cmap='gray')
-    axs[c, 1].axis('off')
-    axs[c, 1].set_title(f"Ch {c}: Denoised")
+# 7. Plot
+plt.figure(figsize=(18, 4))
+for i, (img, title) in enumerate(zip(slices, titles)):
+    plt.subplot(1, 4, i + 1)
+    plt.imshow(img, cmap="gray")
+    plt.title(title, fontsize=12)
+    plt.axis('off')
 
 plt.tight_layout()
-plt.show()   # <<<< 저장 없이 바로 화면에 띄우기
+plt.savefig("dipy_results_comparison.png", dpi=300)
+plt.show()

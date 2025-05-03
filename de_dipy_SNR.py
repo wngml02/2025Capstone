@@ -4,42 +4,51 @@ import numpy as np
 import scipy.io as sio
 from skimage.metrics import structural_similarity as ssim
 
-# 1. Load noisy real/imag and denoised magnitude
-mat_noisy_real = sio.loadmat("noisy_real_only.mat")
-mat_noisy_imag = sio.loadmat("noisy_imag_only.mat")
-noisy_real_all = mat_noisy_real["noisy_real"]
-noisy_imag_all = mat_noisy_imag["noisy_imag"]
+# 1. Load original, noisy, denoised, mask
+mat_data = sio.loadmat("meas_gre_dir1.mat")
+orig = np.abs(mat_data["meas_gre"])      
+denoised = sio.loadmat("denoised_magnitude_dipy_masked.mat")["denoised_magnitude"]
+mask = sio.loadmat("mask_brain.mat")["mask_brain"].astype(bool)
 
-mat_mag = sio.loadmat("denoised_magnitude_dipy_final.mat")
-denoised_magnitude = mat_mag["denoised_magnitude"]
+# Noisy magnitude 계산
+real_noisy = sio.loadmat("noisy_real_only.mat")["noisy_real"]
+imag_noisy = sio.loadmat("noisy_imag_only.mat")["noisy_imag"]
+noisy = np.abs(real_noisy + 1j * imag_noisy)
 
-print("✅ Data loaded successfully.")
+# 2. Slice + channel 기준
+Z = orig.shape[2] // 2
+ch = 0
 
-# 2. Compute noisy magnitude
-noisy_magnitude = np.abs(noisy_real_all + 1j * noisy_imag_all)
-print("✅ Noisy magnitude computed.")
+ref = orig[:, :, Z, ch]
+img_noisy = noisy[:, :, Z, ch]
+img_denoised = denoised[:, :, Z, ch]
+brain_mask = mask[:, :, Z]
 
-# 3. SNR 계산
-def compute_snr(reference, target):
-    signal_power = np.mean(reference ** 2)
-    noise_power = np.mean((reference - target) ** 2)
-    if noise_power == 0:
-        return np.inf
-    return 10 * np.log10(signal_power / noise_power)
-
-snr_value = compute_snr(noisy_magnitude, denoised_magnitude)
-print(f"\n✅ Overall SNR: {snr_value:.2f} dB")
+# 3. SNR 계산 함수
+def compute_snr(ref, target, mask=None):
+    if mask is not None:
+        ref = ref[mask]
+        target = target[mask]
+    noise = target - ref
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        signal_power = np.mean(ref**2)
+        noise_power = np.mean(noise**2)
+        return 10 * np.log10(signal_power / (noise_power + 1e-12))
 
 # 4. SSIM 계산
-# 4D를 3D로 합치기 (X,Y,Z×N)
-noisy_magnitude_flat = noisy_magnitude.reshape(noisy_magnitude.shape[0],
-                                                noisy_magnitude.shape[1],
-                                                noisy_magnitude.shape[2] * noisy_magnitude.shape[3])
+def compute_ssim(ref, target, mask=None):
+    if mask is not None:
+        ref = ref * mask
+        target = target * mask
+    return ssim(ref, target, data_range=ref.max() - ref.min())
 
-denoised_magnitude_flat = denoised_magnitude.reshape(denoised_magnitude.shape[0], denoised_magnitude.shape[1], denoised_magnitude.shape[2] * denoised_magnitude.shape[3])
+# 5. 결과 출력
+snr_noisy = compute_snr(ref, img_noisy, brain_mask)
+snr_denoised = compute_snr(ref, img_denoised, brain_mask)
 
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    ssim_value = ssim(noisy_magnitude_flat, denoised_magnitude_flat, data_range=denoised_magnitude_flat.max() - denoised_magnitude_flat.min())
+ssim_noisy = compute_ssim(ref, img_noisy, brain_mask)
+ssim_denoised = compute_ssim(ref, img_denoised, brain_mask)
 
-print(f"✅ Overall SSIM: {ssim_value:.4f}")
+print(f"✅ Denoised SNR:  {snr_denoised:.2f} dB")
+print(f"✅ Denoised SSIM: {ssim_denoised:.4f}")
