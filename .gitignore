@@ -1,14 +1,1 @@
-meas_gre_dir1.mat
-noisy_meas_gre_dir1.mat
-denoised_imag.mat
-denoised_real.mat
-denoised_magnitude_all.mat
-denoised_imag_dipy.mat
-denoised_real_dipy.mat
-denoised_magnitude_dipy.mat
-noisy_imag_only.mat
-noisy_real_only.mat
-denoised_imag_dipy_final.mat
-denoised_real_dipy_final.mat
-denoised_magnitude_dipy_final.mat
-mask_brain.mat
+*.mat
