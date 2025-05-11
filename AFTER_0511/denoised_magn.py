@@ -2,7 +2,7 @@ import numpy as np
 import scipy.io as sio
 
 # ---------- ① 디노이징 결과 불러오기 ----------
-mat = sio.loadmat('denoised_result.mat')
+mat = sio.loadmat('denoised_result_fixed.mat')
 real_d = mat['den_real']          # shape: (X,Y,Z,C)
 imag_d = mat['den_imag']
 

@@ -3,7 +3,7 @@ import numpy as np
 import scipy.io as sio
 
 # ---------- ① denoised magnitude 불러오기 ----------
-mag_mat = sio.loadmat('AFTER_0511/denoised_magnitude.mat')
+mag_mat = sio.loadmat('AFTER_0511/denoised_result_fixed.mat')
 mag_denoised = mag_mat['mag_denoised']    # shape: (256,224,176,6)
 
 # ---------- ② 원본 phase 불러오기 (from meas_gre_dir1.mat) ----------
