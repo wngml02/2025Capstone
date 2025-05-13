@@ -10,7 +10,7 @@ magnitude = np.abs(data_cpl)
 phase     = np.angle(data_cpl)
 
 # 저장
-sio.savemat('mag_phase_separated.mat', {
+sio.savemat('AFTER_0511/mag_phase_separated.mat', {
     'magnitude': magnitude,
     'phase': phase
 })

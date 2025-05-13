@@ -1,11 +1,14 @@
+import os
+
+import matplotlib.pyplot as plt
 import numpy as np
 import scipy.io as sio
 from dipy.denoise.localpca import mppca
 from tqdm import tqdm
 
 # ---------- 설정 ----------
-PATCH_REAL = 2
-PATCH_IMAG = 4
+PATCH_REAL = 1
+PATCH_IMAG = 1
 SAVE_PATH  = 'AFTER_0511/denoised_result_fixed.mat'
 
 # ---------- 데이터 불러오기 ----------

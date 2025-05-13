@@ -15,7 +15,7 @@ den_complex = real_d + 1j * imag_d
 mag_denoised = np.abs(den_complex)
 
 # ---------- 저장 ----------
-sio.savemat('denoised_magnitude.mat', {
+sio.savemat('AFTER_0511/denoised_magnitude.mat', {
     'mag_denoised': mag_denoised,
     'phase': phase
 })
