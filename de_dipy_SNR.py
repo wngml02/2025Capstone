@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scipy.io as sio
+from dipy.denoise.noise_estimate import estimate_sigma
 from skimage.metrics import structural_similarity as ssim
 
 # ── 데이터 로드 ─────────────────────────────────────────────────────────
@@ -36,6 +38,20 @@ for e in range(6):
 
 df = pd.DataFrame(rows)
 print(df.round(3))
+
+
+res = nois_mag - den_mag
+nois_roi = nois_mag[mask].copy().reshape(-1, 1, 1, 1)  # 4-D 형식 강제
+res_roi  = res[mask].copy().reshape(-1, 1, 1, 1)
+
+sigma_before = float(estimate_sigma(nois_roi, N=4))
+sigma_after  = float(estimate_sigma(res_roi,  N=4))
+print(f"σ before: {sigma_before:.4f},  after: {sigma_after:.4f}")
+
+# 히스토그램
+plt.hist(res[mask].ravel(), bins=100, density=True, alpha=.7)
+plt.title("Residual histogram (should be zero-mean Gaussian/Rician)")
+plt.show()
 
 # ── 평균 행 추가 / 출력 ─────────────────────────────────────────────────
 mean_vals = df[["SNR_deno", "SSIM_deno"]].mean()

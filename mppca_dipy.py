@@ -8,10 +8,10 @@ from dipy.denoise.localpca import localpca, mppca
 # ─── 사용자 설정 ────────────────────────────────────────────────────────────
 ORIG_MAT  = "meas_gre_dir1.mat"
 NOISY_MAT = "noisy_meas_gre_dir1_10.mat"
-OUT_MAT   = "denoised_real_imag_10_tau.mat"
-GRID_PNG  = "gre_mp_pca_grid_tau.png"
+OUT_MAT   = "denoised_real_imag_10_tau_2.mat"
+GRID_PNG  = "gre_mp_pca_grid_tau_2.png"
 
-PATCH_R   = 2
+PATCH_R   = 1
 Z_SLICE   = 88     
 
 # ─── 데이터 로드 ────────────────────────────────────────────────────────────
@@ -36,8 +36,10 @@ def mppca_denoise(vol4d: np.ndarray) -> np.ndarray:
     sigma4d = mppca(abs_vol, mask=mask, patch_radius=PATCH_R)
     sigma   = sigma4d.mean(axis=3).astype(np.float32)
 
-    den_abs = localpca(abs_vol, sigma=sigma, mask=mask,
-                    patch_radius=PATCH_R, tau=2.6).astype(np.float32)
+    tau = 2.6
+    sigma_scaled = sigma * tau
+    den_abs = localpca(abs_vol, sigma=sigma_scaled, mask=mask,
+                    patch_radius=PATCH_R)
     return den_abs * sign          # 부호 복원
 
 print("⋯ MP-PCA denoise REAL")
