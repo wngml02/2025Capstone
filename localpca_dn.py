@@ -503,6 +503,7 @@ def mppca(
     *,
     mask=None,
     patch_radius=2,
+    tau_factor: float | None = 2.6,
     pca_method="eig",
     return_sigma=False,
     out_dtype=None,
