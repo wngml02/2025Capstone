@@ -3,15 +3,16 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.io as sio
-from dipy.denoise.localpca import localpca, mppca
+
+from localpca_dn import mppca
 
 # ─── 사용자 설정 ────────────────────────────────────────────────────────────
 ORIG_MAT  = "meas_gre_dir1.mat"
 NOISY_MAT = "noisy_meas_gre_dir1_10.mat"
-OUT_MAT   = "denoised_real_imag_10_tau_3.mat"
-GRID_PNG  = "gre_mp_pca_grid_tau_3.png"
+OUT_MAT   = "denoised_real_imag_10_dn1.mat"
+GRID_PNG  = "gre_mp_pca_grid_dn1.png"
 
-PATCH_R   = 1
+PATCH_R   = 2
 Z_SLICE   = 88
 
 # ─── 데이터 로드 ────────────────────────────────────────────────────────────
@@ -27,26 +28,14 @@ noisy_imag   = m1["noisy_imag"].astype(np.float32)
 assert noisy_real.shape == orig_cplx.shape, "shape mismatch!"
 
 # ─── MP-PCA 디노이즈 함수 (부호 보존) ───────────────────────────────────────
-def mppca_denoise(vol4d: np.ndarray) -> np.ndarray:
-    """|vol|에 MP-PCA 적용 후 부호 복원 (clip 옵션 없는 DIPY 1.7용)."""
-    sign    = np.sign(vol4d)       # (-1,0,+1)
-    abs_vol = np.abs(vol4d)
-
-    # σ 추정 (4-D) → echo 차원 평균 → 3-D sigma
-    sigma4d = mppca(abs_vol, mask=mask, patch_radius=PATCH_R)
-    sigma   = sigma4d.mean(axis=3).astype(np.float32)
-
-    tau = 2.2
-    sigma_scaled = sigma * tau
-    den_abs = localpca(abs_vol, sigma=sigma_scaled, mask=mask,
-                    patch_radius=PATCH_R)
-    return den_abs * sign          # 부호 복원
+def mppca_denoise(vol4d: np.ndarray, *, mask: np.ndarray,  patch_r: int = PATCH_R) -> np.ndarray:
+    return mppca(vol4d, mask=mask, patch_radius=patch_r)
 
 print("⋯ MP-PCA denoise REAL")
-den_real = mppca_denoise(noisy_real)
+den_real = mppca_denoise(noisy_real, mask=mask)
 
 print("⋯ MP-PCA denoise IMAG")
-den_imag = mppca_denoise(noisy_imag)
+den_imag = mppca_denoise(noisy_imag, mask=mask)
 
 sio.savemat(OUT_MAT, {"den_real": den_real, "den_imag": den_imag})
 print(f"✔ 디노이즈 결과 저장 → {OUT_MAT}")

@@ -374,7 +374,7 @@ def genpca(
                     thetavar[ix1:ix2, jx1:jx2, kx1:kx2] += this_theta
 
     denoised_arr = thetax / theta
-    denoised_arr.clip(min=0, out=denoised_arr)
+
     denoised_arr[mask == 0] = 0
     if return_sigma is True:
         if sigma is None:
