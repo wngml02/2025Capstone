@@ -8,8 +8,8 @@ from dipy.denoise.localpca import localpca, mppca
 # ─── 사용자 설정 ────────────────────────────────────────────────────────────
 ORIG_MAT  = "meas_gre_dir1.mat"
 NOISY_MAT = "noisy_meas_gre_dir1_10.mat"
-OUT_MAT   = "denoised_real_imag_10_tau_2.mat"
-GRID_PNG  = "gre_mp_pca_grid_tau_2.png"
+OUT_MAT   = "denoised_real_imag_10_tau_3.mat"
+GRID_PNG  = "gre_mp_pca_grid_tau_3.png"
 
 PATCH_R   = 1
 Z_SLICE   = 88     
@@ -36,7 +36,7 @@ def mppca_denoise(vol4d: np.ndarray) -> np.ndarray:
     sigma4d = mppca(abs_vol, mask=mask, patch_radius=PATCH_R)
     sigma   = sigma4d.mean(axis=3).astype(np.float32)
 
-    tau = 2.6
+    tau = 2.2
     sigma_scaled = sigma * tau
     den_abs = localpca(abs_vol, sigma=sigma_scaled, mask=mask,
                     patch_radius=PATCH_R)
