@@ -12,7 +12,7 @@ OUT_MAT   = "denoised_real_imag_10_tau_3.mat"
 GRID_PNG  = "gre_mp_pca_grid_tau_3.png"
 
 PATCH_R   = 1
-Z_SLICE   = 88     
+Z_SLICE   = 88
 
 # ─── 데이터 로드 ────────────────────────────────────────────────────────────
 print("⋯ 원본 GRE + 마스크 로드")
