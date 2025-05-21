@@ -9,10 +9,10 @@ from localpca_dn import mppca
 # ─── 사용자 설정 ────────────────────────────────────────────────────────────
 ORIG_MAT  = "meas_gre_dir1.mat"
 NOISY_MAT = "noisy_meas_gre_dir1_10.mat"
-OUT_MAT   = "denoised_real_imag_10_dn1.mat"
-GRID_PNG  = "gre_mp_pca_grid_dn1.png"
+OUT_MAT   = "denoised_real_imag_10_dn2.mat"
+GRID_PNG  = "gre_mp_pca_grid_dn2.png"
 
-PATCH_R   = 2
+PATCH_R   = 1
 Z_SLICE   = 88
 
 # ─── 데이터 로드 ────────────────────────────────────────────────────────────

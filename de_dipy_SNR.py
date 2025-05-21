@@ -9,7 +9,7 @@ from skimage.metrics import structural_similarity as ssim
 # ── 데이터 로드 ─────────────────────────────────────────────────────────
 orig = sio.loadmat("meas_gre_dir1.mat",      simplify_cells=True)
 nois = sio.loadmat("noisy_meas_gre_dir1_10.mat", simplify_cells=True)
-den  = sio.loadmat("denoised_real_imag_10_dn3.mat",  simplify_cells=True)
+den  = sio.loadmat("denoised_real_imag_10_dn2.mat",  simplify_cells=True)
 
 mask      = orig["mask_brain"].astype(bool)
 orig_mag  = np.abs(orig["meas_gre"])
