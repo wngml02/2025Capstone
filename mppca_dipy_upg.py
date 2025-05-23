@@ -9,10 +9,11 @@ from localpca_dn import mppca
 # ─── 사용자 설정 ────────────────────────────────────────────────────────────
 ORIG_MAT  = "meas_gre_dir1.mat"
 NOISY_MAT = "noisy_meas_gre_dir1_10.mat"
-OUT_MAT   = "denoised_real_imag_10_dn3.mat"
-GRID_PNG  = "gre_mp_pca_grid_dn3.png"
+OUT_MAT   = "denoised_real_imag_10_sqrt_r2.mat"
 
-PATCH_R   = 1
+OUT_DIR = Path("dn_10_rd_2")     # 원하는 폴더 이름
+OUT_DIR.mkdir(parents=True, exist_ok=True)
+PATCH_R   = 2
 Z_SLICE   = 88
 
 # ─── 데이터 로드 ────────────────────────────────────────────────────────────
@@ -41,31 +42,57 @@ sio.savemat(OUT_MAT, {"den_real": den_real, "den_imag": den_imag})
 print(f"✔ 디노이즈 결과 저장 → {OUT_MAT}")
 
 # ─── magnitude 계산 & 고정 display range ──────────────────────────────────
-mag_orig  = np.abs(orig_cplx)
-mag_noisy = np.abs(noisy_real + 1j*noisy_imag)
-mag_den   = np.abs(den_real   + 1j*den_imag)
+mag_orig  = np.sqrt(np.square(orig_cplx.real) + np.square(orig_cplx.imag))
+mag_noisy = np.sqrt(np.square(noisy_real) + np.square(noisy_imag))
+mag_den   = np.sqrt(np.square(den_real) + np.square(den_imag))
 
 vmin, vmax = np.percentile(mag_orig[mask], (1, 99))
 
 # ─── 3 × 6 그리드 (slice 88) 단일 PNG ───────────────────────────────────────
-print("⋯ 그리드 이미지 생성")
-fig, axes = plt.subplots(3, 6, figsize=(16, 8))
-row_tuples = [("Original", mag_orig),
-            ("Noisy",    mag_noisy),
-            ("Denoised", mag_den)]
-echo_titles = [f"Echo {i+1}" for i in range(6)]
+# ─── ∆  시각화 (5-열 그리드) ───────────────────────────────────────────────
+print("⋯ echo-wise 5-column 시각화 생성")
+n_echoes = mag_orig.shape[-1]
+slice_idx = Z_SLICE                 # 한 슬라이스 기준
+diff_vmax = np.percentile(
+    np.abs(mag_noisy - mag_orig)[mask], 99)  # diff 컬러범위 고정
 
-for r, (row_name, vol) in enumerate(row_tuples):
-    for e in range(6):
-        ax = axes[r, e]
-        ax.imshow(vol[:, :, Z_SLICE, e], cmap="gray", vmin=vmin, vmax=vmax)
-        ax.axis("off")
-        if r == 0:
-            ax.set_title(echo_titles[e], fontsize=11)
-        if e == 0:
-            ax.set_ylabel(row_name, fontsize=12, rotation=0, labelpad=40)
+for echo in range(n_echoes):
+    fig, axes = plt.subplots(1, 5, figsize=(25, 5))
+    fig.suptitle(f"Echo {echo+1}  |  Slice {slice_idx}", fontsize=16)
 
-plt.tight_layout(pad=0.3)
-plt.savefig(GRID_PNG, dpi=300, bbox_inches="tight")
-plt.close()
-print(f"✔ 그리드 저장 → {GRID_PNG}")
+    # 0) Noisy magnitude
+    axes[0].imshow(mag_noisy[:, :, slice_idx, echo],
+                cmap='gray', vmin=vmin, vmax=vmax)
+    axes[0].set_title('Noisy Magnitude')
+    axes[0].axis('off')
+
+    # 1) Denoised magnitude
+    axes[1].imshow(mag_den[:, :, slice_idx, echo],
+                cmap='gray', vmin=vmin, vmax=vmax)
+    axes[1].set_title('Denoised Magnitude')
+    axes[1].axis('off')
+
+    # 2) Mask
+    axes[2].imshow(mask[:, :, slice_idx], cmap='gray')
+    axes[2].set_title('Mask Region')
+    axes[2].axis('off')
+
+    # 3) Diff (Denoised – Original)
+    diff_map = mag_den[:, :, :, echo] - mag_orig[:, :, :, echo]
+    axes[3].imshow(diff_map[:, :, slice_idx],
+                cmap='bwr', vmin=-diff_vmax, vmax=diff_vmax)
+    axes[3].set_title('Diff (Denoised − Original)')
+    axes[3].axis('off')
+
+    # 4) Diff (Noisy – Original)
+    diff_noisy_map = mag_noisy[:, :, :, echo] - mag_orig[:, :, :, echo]
+    axes[4].imshow(diff_noisy_map[:, :, slice_idx],
+                cmap='bwr', vmin=-diff_vmax, vmax=diff_vmax)
+    axes[4].set_title('Diff (Noisy − Original)')
+    axes[4].axis('off')
+
+    plt.tight_layout(rect=[0, 0, 1, 0.93])
+    out_png = OUT_DIR / f"echo{echo+1:02d}_slice{slice_idx:03d}_grid.png"
+    plt.savefig(out_png, dpi=300, bbox_inches="tight")
+    plt.close()
+    print(f"  ✔ 저장 → {out_png}")

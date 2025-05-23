@@ -19,7 +19,7 @@ for c in range(6):
     mean_signals.append(np.mean(brain_region))
 
 overall_mean = np.mean(mean_signals)
-sigma = overall_mean * 0.1
+sigma = overall_mean * 0.2
 
 #--------------------------------------------------------------------------
 # 3. 노이즈 추가된 real/imaginary를 넣을 배열
@@ -56,7 +56,7 @@ for c in range(6):
 #--------------------------------------------------------------------------
 # 6. .mat 파일로 저장
 #--------------------------------------------------------------------------
-sio.savemat("noisy_meas_gre_dir1_10.mat", {
+sio.savemat("noisy_meas_gre_dir1_20.mat", {
     "noisy_real": noisy_real_all,
     "noisy_imag": noisy_imag_all,
     "noise_real": noise_real_all,
