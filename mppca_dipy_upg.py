@@ -8,12 +8,12 @@ from localpca_dn import mppca
 
 # ─── 사용자 설정 ────────────────────────────────────────────────────────────
 ORIG_MAT  = "meas_gre_dir1.mat"
-NOISY_MAT = "noisy_meas_gre_dir1_30.mat"
-OUT_MAT   = "denoised_real_imag_30_sqrt_r3.mat"
+NOISY_MAT = "noisy_meas_gre_dir1_50.mat"
+OUT_MAT   = "denoised_real_imag_50_sqrt_r3.mat"
 
-OUT_DIR = Path("dn_30_rd_3")     # 원하는 폴더 이름
+OUT_DIR = Path("dn_50_rd_3")     # 원하는 폴더 이름
 OUT_DIR.mkdir(parents=True, exist_ok=True)
-PATCH_R   = 2
+PATCH_R   = 3
 Z_SLICE   = 88
 
 # ─── 데이터 로드 ────────────────────────────────────────────────────────────
