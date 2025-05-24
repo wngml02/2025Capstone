@@ -11,9 +11,9 @@ from skimage.metrics import structural_similarity as ssim
 
 # ────────────────── 사용자 설정 ──────────────────────────────────────────
 ORIG_MAT  = "meas_gre_dir1.mat"              # 원본 복소수 GRE
-NOISY_MAT = "noisy_meas_gre_dir1_10.mat"     # 노이즈 추가본
-DENO_MAT  = "denoised_real_imag_10_sqrt_r2.mat"  # 디노이즈 결과
-EXCEL_OUT = Path("10_snr_ssim_by_echo_slice.xlsx")
+NOISY_MAT = "noisy_meas_gre_dir1_50.mat"     # 노이즈 추가본
+DENO_MAT  = "denoised_real_imag_50_sqrt_r2.mat"  # 디노이즈 결과
+EXCEL_OUT = Path("50_snr_ssim_by_echo_slice.xlsx")
 # ────────────────────────────────────────────────────────────────────────
 
 # pandas 출력폭·행수 늘리기 (터미널 절단 방지)
@@ -57,10 +57,10 @@ for e in range(n_echoes):
     snr_b, snr_a = compute_snr(n, o, mask), compute_snr(d, o, mask)
     ssim_b = ssim(o, n, data_range=np.ptp(o), mask=mask)
     ssim_a = ssim(o, d, data_range=np.ptp(o), mask=mask)
-    rows_echo.append(dict(Echo=e+1,
-                          SNR_before=snr_b, SNR_after=snr_a, ΔSNR=snr_a-snr_b,
-                          SSIM_before=ssim_b, SSIM_after=ssim_a,
-                          ΔSSIM=ssim_a-ssim_b))
+    rows_echo.append(dict(
+                        SNR_before=snr_b, SNR_after=snr_a, ΔSNR=snr_a-snr_b,
+                        SSIM_before=ssim_b, SSIM_after=ssim_a,
+                        ΔSSIM=ssim_a-ssim_b))
 df_echo = pd.DataFrame(rows_echo)
 print("\n=== Echo 평균 ===")
 print(df_echo.round(3))

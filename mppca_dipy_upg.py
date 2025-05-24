@@ -8,10 +8,10 @@ from localpca_dn import mppca
 
 # ─── 사용자 설정 ────────────────────────────────────────────────────────────
 ORIG_MAT  = "meas_gre_dir1.mat"
-NOISY_MAT = "noisy_meas_gre_dir1_40.mat"
-OUT_MAT   = "denoised_real_imag_40_sqrt_r2.mat"
+NOISY_MAT = "noisy_meas_gre_dir1_30.mat"
+OUT_MAT   = "denoised_real_imag_30_sqrt_r3.mat"
 
-OUT_DIR = Path("dn_40_rd_2")     # 원하는 폴더 이름
+OUT_DIR = Path("dn_30_rd_3")     # 원하는 폴더 이름
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 PATCH_R   = 2
 Z_SLICE   = 88
