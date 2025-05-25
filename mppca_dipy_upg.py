@@ -6,17 +6,15 @@ import scipy.io as sio
 
 from localpca_dn import mppca
 
-# ─── 사용자 설정 ────────────────────────────────────────────────────────────
 ORIG_MAT  = "meas_gre_dir1.mat"
-NOISY_MAT = "noisy_meas_gre_dir1_50.mat"
-OUT_MAT   = "denoised_real_imag_50_sqrt_r3.mat"
+NOISY_MAT = "noisy_meas_gre_dir1_10.mat"
+OUT_MAT   = "denoised_real_imag_10_sqrt_r3.mat"
 
-OUT_DIR = Path("dn_50_rd_3")     # 원하는 폴더 이름
+OUT_DIR = Path("dn_10_rd_3")     # 원하는 폴더 이름
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 PATCH_R   = 3
 Z_SLICE   = 88
 
-# ─── 데이터 로드 ────────────────────────────────────────────────────────────
 print("⋯ 원본 GRE + 마스크 로드")
 m0            = sio.loadmat(ORIG_MAT, simplify_cells=True)
 orig_cplx     = m0["meas_gre"].astype(np.complex64)         # (256,224,176,6)
@@ -28,7 +26,6 @@ noisy_real   = m1["noisy_real"].astype(np.float32)
 noisy_imag   = m1["noisy_imag"].astype(np.float32)
 assert noisy_real.shape == orig_cplx.shape, "shape mismatch!"
 
-# ─── MP-PCA 디노이즈 함수 (부호 보존) ───────────────────────────────────────
 def mppca_denoise(vol4d: np.ndarray, *, mask: np.ndarray,  patch_r: int = PATCH_R) -> np.ndarray:
     return mppca(vol4d, mask=mask, patch_radius=patch_r)
 
@@ -41,15 +38,13 @@ den_imag = mppca_denoise(noisy_imag, mask=mask)
 sio.savemat(OUT_MAT, {"den_real": den_real, "den_imag": den_imag})
 print(f"✔ 디노이즈 결과 저장 → {OUT_MAT}")
 
-# ─── magnitude 계산 & 고정 display range ──────────────────────────────────
 mag_orig  = np.sqrt(np.square(orig_cplx.real) + np.square(orig_cplx.imag))
 mag_noisy = np.sqrt(np.square(noisy_real) + np.square(noisy_imag))
 mag_den   = np.sqrt(np.square(den_real) + np.square(den_imag))
 
 vmin, vmax = np.percentile(mag_orig[mask], (1, 99))
 
-# ─── 3 × 6 그리드 (slice 88) 단일 PNG ───────────────────────────────────────
-# ─── ∆  시각화 (5-열 그리드) ───────────────────────────────────────────────
+# 시각화
 print("⋯ echo-wise 5-column 시각화 생성")
 n_echoes = mag_orig.shape[-1]
 slice_idx = Z_SLICE                 # 한 슬라이스 기준
@@ -66,7 +61,7 @@ for echo in range(n_echoes):
     axes[0].set_title('Noisy Magnitude')
     axes[0].axis('off')
 
-    # 1) Denoised magnitude
+    # 1) Denoised split
     axes[1].imshow(mag_den[:, :, slice_idx, echo],
                 cmap='gray', vmin=vmin, vmax=vmax)
     axes[1].set_title('Denoised split')
