@@ -10,9 +10,9 @@ from dipy.denoise.noise_estimate import estimate_sigma
 from skimage.metrics import structural_similarity as ssim
 
 ORIG_MAT  = "meas_gre_dir1.mat"              # 원본 복소수 GRE
-NOISY_MAT = "noisy_meas_gre_dir1_50.mat"     # 노이즈 추가본
-DENO_MAT  = "denoised_real_imag_50_sqrt_r3.mat"  # 디노이즈 결과
-EXCEL_OUT = Path("50_3_snr_ssim_by_echo_slice.xlsx")
+NOISY_MAT = "noisy_meas_gre_dir1_30.mat"     # 노이즈 추가본
+DENO_MAT  = "denoised_real_imag_30_sqrt_r3.mat"  # 디노이즈 결과
+EXCEL_OUT = Path("30_3_snr_ssim_by_echo_slice.xlsx")
 
 pd.set_option("display.max_rows",    2000)
 pd.set_option("display.max_columns", None)

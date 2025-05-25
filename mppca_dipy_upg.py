@@ -7,10 +7,10 @@ import scipy.io as sio
 from localpca_dn import mppca
 
 ORIG_MAT  = "meas_gre_dir1.mat"
-NOISY_MAT = "noisy_meas_gre_dir1_10.mat"
-OUT_MAT   = "denoised_real_imag_10_sqrt_r3.mat"
+NOISY_MAT = "noisy_meas_gre_dir1_30.mat"
+OUT_MAT   = "denoised_real_imag_30_sqrt_r3.mat"
 
-OUT_DIR = Path("dn_10_rd_3")     # 원하는 폴더 이름
+OUT_DIR = Path("dn_30_rd_3")     # 원하는 폴더 이름
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 PATCH_R   = 3
 Z_SLICE   = 88
@@ -35,12 +35,16 @@ den_real = mppca_denoise(noisy_real, mask=mask)
 print("⋯ MP-PCA denoise IMAG")
 den_imag = mppca_denoise(noisy_imag, mask=mask)
 
-sio.savemat(OUT_MAT, {"den_real": den_real, "den_imag": den_imag})
+den_cplx = den_real + 1j * den_imag
+
+# 저장
+sio.savemat(OUT_MAT, {"den_real": den_real, "den_imag": den_imag, "den_cplx": den_cplx})
 print(f"✔ 디노이즈 결과 저장 → {OUT_MAT}")
 
-mag_orig  = np.sqrt(np.square(orig_cplx.real) + np.square(orig_cplx.imag))
-mag_noisy = np.sqrt(np.square(noisy_real) + np.square(noisy_imag))
-mag_den   = np.sqrt(np.square(den_real) + np.square(den_imag))
+# magnitude 계산 (원본, noisy, denoised)
+mag_orig  = np.abs(orig_cplx)
+mag_noisy = np.abs(noisy_real + 1j * noisy_imag)
+mag_den   = np.abs(den_cplx)
 
 vmin, vmax = np.percentile(mag_orig[mask], (1, 99))
 
