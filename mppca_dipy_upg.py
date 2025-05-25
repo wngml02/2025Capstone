@@ -69,7 +69,7 @@ for echo in range(n_echoes):
     # 1) Denoised magnitude
     axes[1].imshow(mag_den[:, :, slice_idx, echo],
                 cmap='gray', vmin=vmin, vmax=vmax)
-    axes[1].set_title('Denoised Magnitude')
+    axes[1].set_title('Denoised split')
     axes[1].axis('off')
 
     # 2) Mask
