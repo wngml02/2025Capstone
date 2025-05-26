@@ -9,8 +9,8 @@ from skimage.metrics import structural_similarity as ssim
 
 # 파일 로드
 ORIG_MAT = "meas_gre_dir1.mat"
-NOISY_MAT = "noisy_meas_gre_dir1_30.mat"
-DENO_MAT = "denoised_real_imag_30_sqrt_r3.mat"
+NOISY_MAT = "noisy_meas_gre_dir1_50.mat"
+DENO_MAT = "denoised_real_imag_50_sqrt_r3.mat"
 
 print("⋯ 데이터 로드")
 orig = sio.loadmat(ORIG_MAT, simplify_cells=True)
