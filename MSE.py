@@ -2,71 +2,117 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import scipy.io as sio
 
-# ─── 파일 경로 설정 ─────────────────────────────
-ref_file = Path("meas_gre_dir1.mat")             # Ground Truth
-noisy_file = Path("noisy_meas_gre_dir1_30.mat")     # 노이즈 포함
-den_file = Path("denoised_real_imag_30_sqrt_r3.mat")    # Denoised
+# ─── 파일 로드 ─────────────────────────────
+ORIG_MAT = "meas_gre_dir1.mat"
+NOISY_MAT = "noisy_meas_gre_dir1_30.mat"
+DENO_MAT = "denoised_real_imag_30_sqrt_r3.mat"
 
-# ─── 데이터 로드 ────────────────────────────────
-data_ref = sio.loadmat(ref_file)
-data_noisy = sio.loadmat(noisy_file)
-data_den = sio.loadmat(den_file)
+print("⋯ 데이터 로드")
+orig = sio.loadmat(ORIG_MAT, simplify_cells=True)
+noisy = sio.loadmat(NOISY_MAT, simplify_cells=True)
+den = sio.loadmat(DENO_MAT, simplify_cells=True)
 
-ref = data_ref['meas_gre']
-noisy = data_noisy['noisy_meas_gre']
-den = data_den['den_meas_gre']
-mask = data_ref['mask_brain']
+# 데이터 준비
+mask = orig['mask_brain'].astype(bool)
+orig_cplx = orig['meas_gre'].astype(np.complex64)
+noisy_real = noisy['noisy_real'].astype(np.float32)
+noisy_imag = noisy['noisy_imag'].astype(np.float32)
+den_cplx = den['den_real'].astype(np.float32) + 1j * den['den_imag'].astype(np.float32)
 
-# ─── 노이즈 표준편차 추정 (마스크 내에서) ────────
-sigma_est = np.std((noisy - ref)[mask == 1])
-print(f"Estimated noise sigma: {sigma_est:.4f}")
+# 복소수 및 magnitude 변환
+noisy_cplx = noisy_real + 1j * noisy_imag
+ref = np.abs(orig_cplx)
+noisy = np.abs(noisy_cplx)
+den = np.abs(den_cplx)
 
-# ─── MSE & RMSE 계산 (Rician 보정 비교) ───────────
-def compute_mse_rmse_with_rician(ref, comp, mask, sigma):
-    mse_no_corr, rmse_no_corr = [], []
-    mse_corr, rmse_corr = [], []
-    for echo in range(ref.shape[3]):
-        mse_echo_no, rmse_echo_no = [], []
-        mse_echo_corr, rmse_echo_corr = [], []
-        for slice_idx in range(ref.shape[2]):
-            ref_slice = ref[:, :, slice_idx, echo]
-            comp_slice = comp[:, :, slice_idx, echo]
-            mask_slice = mask[:, :, slice_idx]
+# 🌟 sigma_est 계산 (real/imag 분리 방식)
+noise_real_all = noisy_real - orig_cplx.real
+noise_imag_all = noisy_imag - orig_cplx.imag
+noise_std_real = np.std(noise_real_all[mask])
+noise_std_imag = np.std(noise_imag_all[mask])
+sigma_est = np.sqrt((noise_std_real**2 + noise_std_imag**2) / 2)
+print(f"🌟 Global Sigma (mean): {sigma_est:.4f}")
 
-            # ── 보정 없는 diff ──
-            diff_no = (ref_slice - comp_slice)[mask_slice == 1]
-            mse_no = np.mean(np.square(diff_no))
-            rmse_no = np.sqrt(mse_no)
+# Ground Truth 표준편차 계산 (real/imag 기반)
+gt_std_list = []
+for echo in range(orig_cplx.shape[3]):
+    ref_real = orig_cplx[..., echo].real
+    ref_imag = orig_cplx[..., echo].imag
+    noise_std_real = np.std(ref_real[mask])
+    noise_std_imag = np.std(ref_imag[mask])
+    gt_std = np.sqrt((noise_std_real**2 + noise_std_imag**2) / 2)
+    gt_std_list.append(gt_std)
 
-            # ── Rician 보정 적용 ──
-            comp_corr = np.sqrt(np.maximum(np.square(comp_slice) - 2 * sigma**2, 0))
-            ref_corr = np.sqrt(np.maximum(np.square(ref_slice) - 2 * sigma**2, 0))
-            diff_corr = (ref_corr - comp_corr)[mask_slice == 1]
-            mse_c = np.mean(np.square(diff_corr))
-            rmse_c = np.sqrt(mse_c)
+# MSE/RMSE 계산 함수 (echo별)
+def calc_mse_rmse_echo(ref, comp, mask, sigma):
+    n_echoes = ref.shape[3]
+    mse_list, rmse_list = [], []
+    for echo in range(n_echoes):
+        r = ref[..., echo]
+        c = comp[..., echo]
+        msk = mask
+        
+        # 보정 전
+        mse_no = np.mean(np.square((r - c)[msk]))
+        rmse_no = np.sqrt(mse_no)
 
-            mse_echo_no.append(mse_no)
-            rmse_echo_no.append(rmse_no)
-            mse_echo_corr.append(mse_c)
-            rmse_echo_corr.append(rmse_c)
-        mse_no_corr.append(mse_echo_no)
-        rmse_no_corr.append(rmse_echo_no)
-        mse_corr.append(mse_echo_corr)
-        rmse_corr.append(rmse_echo_corr)
-    return mse_no_corr, rmse_no_corr, mse_corr, rmse_corr
+        # 보정 후
+        c_corr = np.sqrt(np.maximum(c**2 - 2 * sigma**2, 0))
+        mse_corr = np.mean(np.square((r - c_corr)[msk]))
+        rmse_corr = np.sqrt(mse_corr)
 
-# ─── 보정 전/후 계산 ─────────────────────────────
-mse_noisy_no, rmse_noisy_no, mse_noisy_corr, rmse_noisy_corr = compute_mse_rmse_with_rician(ref, noisy, mask, sigma_est)
-mse_den_no, rmse_den_no, mse_den_corr, rmse_den_corr = compute_mse_rmse_with_rician(ref, den, mask, sigma_est)
+        mse_list.append((mse_no, mse_corr))
+        rmse_list.append((rmse_no, rmse_corr))
+    return mse_list, rmse_list
 
-# ─── 출력 예시 ───────────────────────────────────
-for echo in range(6):
-    print(f"\nEcho {echo+1}:")
-    for slice_idx in range(ref.shape[2]):
-        print(f"  Slice {slice_idx+1}: "
-              f"[Noisy] MSE={mse_noisy_no[echo][slice_idx]:.6f}, RMSE={rmse_noisy_no[echo][slice_idx]:.6f} | "
-              f"MSE_corr={mse_noisy_corr[echo][slice_idx]:.6f}, RMSE_corr={rmse_noisy_corr[echo][slice_idx]:.6f}")
-        print(f"          [Denoised] MSE={mse_den_no[echo][slice_idx]:.6f}, RMSE={rmse_den_no[echo][slice_idx]:.6f} | "
-              f"MSE_corr={mse_den_corr[echo][slice_idx]:.6f}, RMSE_corr={rmse_den_corr[echo][slice_idx]:.6f}")
+# ─── 계산 ─────────────────────────────────────
+print("⋯ Noisy 계산")
+mse_vals, rmse_vals = calc_mse_rmse_echo(ref, noisy, mask, sigma_est)
+print("⋯ Denoised 계산")
+mse_vals_den, rmse_vals_den = calc_mse_rmse_echo(ref, den, mask, sigma_est)
+
+# ─── 표 정리 ─────────────────────────────
+n_echoes = ref.shape[3]
+df_mse = pd.DataFrame({
+    'Echo': range(1, n_echoes+1),
+    'GT_Std': gt_std_list,
+    'Before MSE': [m[0] for m in mse_vals],
+    'After MSE': [m[1] for m in mse_vals_den]
+})
+df_rmse = pd.DataFrame({
+    'Echo': range(1, n_echoes+1),
+    'GT_Std': gt_std_list,
+    'Before RMSE': [r[0] for r in rmse_vals],
+    'After RMSE': [r[1] for r in rmse_vals_den]
+})
+
+# ─── RMSE 감소 비율(%) 계산 및 추가 ─────────────────────────────
+df_rmse['RMSE Reduction (%)'] = 100 * (df_rmse['Before RMSE'] - df_rmse['After RMSE']) / df_rmse['Before RMSE']
+
+# ─── 출력 및 저장 ─────────────────────────────
+output_path = Path("MSE_RMSE_Mag_BiasCorrected_GTstd.xlsx")
+with pd.ExcelWriter(output_path) as writer:
+    df_mse.to_excel(writer, sheet_name="MSE_Table", index=False)
+    df_rmse.to_excel(writer, sheet_name="RMSE_Table", index=False)
+print(f"✔ Excel 저장 완료: {output_path}")
+
+print("\n=== MSE Table (GT Std 포함) ===")
+print(df_mse.round(4))
+print("\n=== RMSE Table (GT Std 포함 + 감소율) ===")
+print(df_rmse.round(4))
+
+# ─── RMSE Bar Chart ─────────────────────────────
+plt.figure(figsize=(10, 6))
+x = df_rmse['Echo']
+plt.bar(x - 0.15, df_rmse['Before RMSE'], width=0.3, label='Before RMSE')
+plt.bar(x + 0.15, df_rmse['After RMSE'], width=0.3, label='After RMSE')
+plt.xlabel('Echo')
+plt.ylabel('RMSE')
+plt.title('Before vs After RMSE by Echo')
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()
