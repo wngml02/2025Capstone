@@ -42,9 +42,9 @@ sio.savemat(OUT_MAT, {"den_real": den_real, "den_imag": den_imag, "den_cplx": de
 print(f"✔ 디노이즈 결과 저장 → {OUT_MAT}")
 
 # magnitude 계산 (원본, noisy, denoised)
-mag_orig  = np.abs(orig_cplx)
-mag_noisy = np.abs(noisy_real + 1j * noisy_imag)
-mag_den   = np.abs(den_cplx)
+mag_orig  = np.sqrt(np.square(orig_cplx.real) + np.square(orig_cplx.imag))
+mag_noisy = np.sqrt(np.square(noisy_real) + np.square(noisy_imag))
+mag_den   = np.sqrt(np.square(den_real) + np.square(den_imag))
 
 vmin, vmax = np.percentile(mag_orig[mask], (1, 99))
 
