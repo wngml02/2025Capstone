@@ -1,90 +1,67 @@
+
+# ─── 1. 경로·변수 이름만 맞춰 주세요 ────────────────────────────────────────
+orig_file   = "meas_gre_dir1.mat"              # 원본
+noisy_file  = "noisy_meas_gre_dir1_30.mat"     # 노이즈 주입본
+deno_file   = "denoised_real_imag_30_sqrt_r3.mat"   # 디노이즈 결과
+
+mask_key    = "mask_brain"        # 3-D 1/0
+orig_key    = "meas_gre"          # complex (X,Y,Z,C)
+noisy_keys  = ("noisy_real", "noisy_imag")
+deno_keys   = ("den_real",  "den_imag")
+# ──────────────────────────────────────────────────────────────────────────
+
 import numpy as np
 import pandas as pd
 import scipy.io as sio
-from skimage.metrics import structural_similarity as ssim
 
-# 파일 로드
-ORIG_MAT = "meas_gre_dir1.mat"
-NOISY_MAT = "noisy_meas_gre_dir1_30.mat"
-DENO_MAT = "denoised_real_imag_30_sqrt_r3.mat"
+# ─── 2. 로드 & magnitude 변환 ──────────────────────────────────────────────
+m_o = sio.loadmat(orig_file,  simplify_cells=True)
+m_n = sio.loadmat(noisy_file, simplify_cells=True)
+m_d = sio.loadmat(deno_file,  simplify_cells=True)
 
-print("⋯ 데이터 로드")
-orig = sio.loadmat(ORIG_MAT, simplify_cells=True)
-noisy = sio.loadmat(NOISY_MAT, simplify_cells=True)
-den = sio.loadmat(DENO_MAT, simplify_cells=True)
+mask        = m_o[mask_key].astype(bool)
+orig_mag    = np.abs(m_o[orig_key]).astype(np.float32)
+noisy_mag   = np.abs(m_n[noisy_keys[0]] + 1j*m_n[noisy_keys[1]]).astype(np.float32)
+deno_mag    = np.abs(m_d[deno_keys[0]] + 1j*m_d[deno_keys[1]]).astype(np.float32)
 
-mask = orig['mask_brain'].astype(bool)
-orig_cplx = orig['meas_gre'].astype(np.complex64)
-noisy_real = noisy['noisy_real'].astype(np.float32)
-noisy_imag = noisy['noisy_imag'].astype(np.float32)
-den_real = den['den_real'].astype(np.float32)
-den_imag = den['den_imag'].astype(np.float32)
+# ─── 3. SNR 계산 함수 (diff + Rician bias 보정) ────────────────────────────
+def snr_diff_rician(ref_mag, test_mag, brain_mask):
+    snr = []
+    for c in range(ref_mag.shape[3]):
+        brain_ref   = ref_mag[..., c][brain_mask]
+        brain_diff  = (test_mag[..., c] - ref_mag[..., c])[brain_mask]
 
-# 복소수 및 magnitude 생성
-noisy_cplx = noisy_real + 1j * noisy_imag
-den_cplx = den_real + 1j * den_imag
-mag_noisy = np.abs(noisy_cplx)
-mag_den = np.abs(den_cplx)
-mag_orig = np.abs(orig_cplx)
+        mean_signal = brain_ref.mean()          
+        std_raw     = brain_diff.std(ddof=1) 
 
-# 🌟 Ground truth 기반 global sigma 계산 🌟
-# noisy와 ground truth(orig_cplx) 간의 real/imag 차이를 계산
-noise_real_all = noisy_real - orig_cplx.real
-noise_imag_all = noisy_imag - orig_cplx.imag
+        sigma       = std_raw / np.sqrt(2)      
+        
+        s_corr_sq   = mean_signal**2 - 2 * sigma**2
+        s_corr      = np.sqrt(max(s_corr_sq, 0.0))
 
-# mask 영역(신호 있는 영역)에서 표준편차 계산
-noise_std_real = np.std(noise_real_all[mask])
-noise_std_imag = np.std(noise_imag_all[mask])
+        snr.append(s_corr / sigma)
+    return np.asarray(snr, float)
 
-# real/imag 두 성분의 분산을 평균한 후 표준편차(sigma) 계산
-sigma_global = np.sqrt((noise_std_real**2 + noise_std_imag**2) / 2)
-print(f"🌟 Global Sigma (mean): {sigma_global:.4f}")
+snr_noisy = snr_diff_rician(orig_mag, noisy_mag, mask)
+snr_deno  = snr_diff_rician(orig_mag, deno_mag,  mask)
 
-# SNR 계산 함수
-def compute_snr(data, ref, mask, is_complex=True):
-    if is_complex:
-        # 복소수 데이터 → magnitude 파워 기반 SNR
-        signal_power = np.mean(np.abs(ref[mask])**2)
-        noise_power = np.mean(np.abs(data[mask] - ref[mask])**2)
-    else:
-        # 실수 데이터 → 그냥 제곱 기반 SNR
-        signal_power = np.mean((ref[mask])**2)
-        noise_power = np.mean((data[mask] - ref[mask])**2)
-    return 10 * np.log10(signal_power / noise_power)
+# ─── 4. 결과 테이블 ────────────────────────────────────────────────────────
+df = pd.DataFrame({
+    "Echo":         np.arange(1, len(snr_noisy)+1),
+    "SNR_noisy":    snr_noisy,
+    "SNR_denoised": snr_deno,
+    "Improvement":  snr_deno - snr_noisy
+})
+pd.options.display.float_format = "{:,.3f}".format
+print(df.to_string(index=False))
 
-# Echo별 결과 리스트 생성
-n_echoes = orig_cplx.shape[-1]
-rows = []
-for e in range(n_echoes):
-    m_o = mag_orig[..., e]  # ground truth magnitude
-    m_n = mag_noisy[..., e] # noisy magnitude
-    m_d = mag_den[..., e]   # denoised magnitude
-    
-    # 🌟 Bias correction 공식: m_corrected = sqrt(max(m^2 - 2*sigma^2, 0))
-    m_nc = np.sqrt(np.maximum(m_n**2 - 2*sigma_global**2, 0))
-    m_dc = np.sqrt(np.maximum(m_d**2 - 2*sigma_global**2, 0))
-    
-    # SNR 및 SSIM 계산 (ground truth 기준)
-    snr_b = compute_snr(m_nc, m_o, mask, is_complex=False)  # 보정 전 noisy와 비교
-    snr_a = compute_snr(m_dc, m_o, mask, is_complex=False)  # 보정 후 denoised와 비교
-    ssim_b = ssim(m_o, m_nc, data_range=np.ptp(m_o), mask=mask)
-    ssim_a = ssim(m_o, m_dc, data_range=np.ptp(m_o), mask=mask)
-    
-    rows.append(dict(Echo=e, SNR_before=snr_b, SNR_after=snr_a, ΔSNR=snr_a-snr_b,
-                    SSIM_before=ssim_b, SSIM_after=ssim_a, ΔSSIM=ssim_a-ssim_b))
 
-# DataFrame 생성 및 평균값 추가
-df = pd.DataFrame(rows)
-average = df.mean(numeric_only=True)
-average_row = {col: average[col] for col in df.columns if col != 'Echo'}
-average_row['Echo'] = 'Average'
-df = pd.concat([df, pd.DataFrame([average_row])], ignore_index=True)
+import numpy as np
 
-# 출력
-print("\nEcho-wise Performance Comparison (Bias-Corrected with Global Sigma):")
-print(df.round(3))
+A, sigma, N = 5, 1, 1_000_000          # 실제 SNR≈5
+noise = np.random.normal(0, sigma, N) + 1j*np.random.normal(0, sigma, N)
+mag   = np.abs(A + noise)
 
-# 필요하면 Excel 저장
-with pd.ExcelWriter("SNR_SSIM_BiasCorrected_GlobalSigma.xlsx") as writer:
-    df.to_excel(writer, sheet_name="BiasCorrected_GlobalSigma", index=False)
-print("✔ Excel 저장 완료: SNR_SSIM_BiasCorrected_GlobalSigma.xlsx")
+S_meas = mag.mean()
+S_corr = np.sqrt(max(S_meas**2 - 2*sigma**2, 0))
+print("편향 전후 오차:", abs(S_meas-A)/A, "→", abs(S_corr-A)/A)
