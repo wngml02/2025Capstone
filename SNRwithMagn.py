@@ -1,8 +1,8 @@
 
 # ─── 1. 경로·변수 이름만 맞춰 주세요 ────────────────────────────────────────
 orig_file   = "meas_gre_dir1.mat"              # 원본
-noisy_file  = "noisy_meas_gre_dir1_30.mat"     # 노이즈 주입본
-deno_file   = "denoised_real_imag_30_sqrt_r3.mat"   # 디노이즈 결과
+noisy_file  = "noisy_meas_gre_dir1_50.mat"     # 노이즈 주입본
+deno_file   = "denoised_real_imag_50_sqrt_r2.mat"   # 디노이즈 결과
 
 mask_key    = "mask_brain"        # 3-D 1/0
 orig_key    = "meas_gre"          # complex (X,Y,Z,C)
