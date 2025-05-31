@@ -1,20 +1,18 @@
 
-# ─── 1. 경로·변수 이름만 맞춰 주세요 ────────────────────────────────────────
-orig_file   = "meas_gre_dir1.mat"              # 원본
-noisy_file  = "noisy_meas_gre_dir1_50.mat"     # 노이즈 주입본
-deno_file   = "denoised_real_imag_50_sqrt_r2.mat"   # 디노이즈 결과
 
-mask_key    = "mask_brain"        # 3-D 1/0
-orig_key    = "meas_gre"          # complex (X,Y,Z,C)
+orig_file   = "meas_gre_dir1.mat"              
+noisy_file  = "noisy_meas_gre_dir1_50.mat"     
+deno_file   = "denoised_real_imag_50_sqrt_r2.mat"   
+
+mask_key    = "mask_brain"      
+orig_key    = "meas_gre"         
 noisy_keys  = ("noisy_real", "noisy_imag")
 deno_keys   = ("den_real",  "den_imag")
-# ──────────────────────────────────────────────────────────────────────────
 
 import numpy as np
 import pandas as pd
 import scipy.io as sio
 
-# ─── 2. 로드 & magnitude 변환 ──────────────────────────────────────────────
 m_o = sio.loadmat(orig_file,  simplify_cells=True)
 m_n = sio.loadmat(noisy_file, simplify_cells=True)
 m_d = sio.loadmat(deno_file,  simplify_cells=True)
@@ -24,7 +22,6 @@ orig_mag    = np.abs(m_o[orig_key]).astype(np.float32)
 noisy_mag   = np.abs(m_n[noisy_keys[0]] + 1j*m_n[noisy_keys[1]]).astype(np.float32)
 deno_mag    = np.abs(m_d[deno_keys[0]] + 1j*m_d[deno_keys[1]]).astype(np.float32)
 
-# ─── 3. SNR 계산 함수 (diff + Rician bias 보정) ────────────────────────────
 def snr_diff_rician(ref_mag, test_mag, brain_mask):
     snr = []
     for c in range(ref_mag.shape[3]):
@@ -34,7 +31,7 @@ def snr_diff_rician(ref_mag, test_mag, brain_mask):
         mean_signal = brain_ref.mean()          
         std_raw     = brain_diff.std(ddof=1) 
 
-        sigma       = std_raw / np.sqrt(2)      
+        sigma       = std_raw   # 이 부분 아직 미정
         
         s_corr_sq   = mean_signal**2 - 2 * sigma**2
         s_corr      = np.sqrt(max(s_corr_sq, 0.0))
@@ -45,7 +42,6 @@ def snr_diff_rician(ref_mag, test_mag, brain_mask):
 snr_noisy = snr_diff_rician(orig_mag, noisy_mag, mask)
 snr_deno  = snr_diff_rician(orig_mag, deno_mag,  mask)
 
-# ─── 4. 결과 테이블 ────────────────────────────────────────────────────────
 df = pd.DataFrame({
     "Echo":         np.arange(1, len(snr_noisy)+1),
     "SNR_noisy":    snr_noisy,
@@ -58,7 +54,7 @@ print(df.to_string(index=False))
 
 import numpy as np
 
-A, sigma, N = 5, 1, 1_000_000          # 실제 SNR≈5
+A, sigma, N = 5, 1, 1_000_000       
 noise = np.random.normal(0, sigma, N) + 1j*np.random.normal(0, sigma, N)
 mag   = np.abs(A + noise)
 
