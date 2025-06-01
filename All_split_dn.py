@@ -1,6 +1,6 @@
 from pathlib import Path
 
-NoiseLvl     = 10                    
+NoiseLvl     = 50                    
 PATCH_R      = 3                      # MP-PCA patch radius
 
 ORIG_MAT     = "meas_gre_dir1.mat"               
