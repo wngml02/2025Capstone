@@ -12,6 +12,7 @@ Z_SLICE = 88
 NOISE_LEVELS = [10, 20, 30, 40, 50]
 OUT_DIR = Path("denoised_summary")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
+ECHO_IDX = 0    # 첫번째 echo 선택
 
 # ─── 원본 데이터 로드 ──────────────────────────────────────────────────────
 m0 = sio.loadmat(ORIG_MAT, simplify_cells=True)
@@ -32,22 +33,22 @@ for lvl in NOISE_LEVELS:
     noisy_real, noisy_imag = m1["noisy_real"], m1["noisy_imag"]
     den_real, den_imag = m2["den_real"], m2["den_imag"]
     
-    # magnitude 계산 (echo-wise 평균)
-    mag_noisy = np.sqrt(noisy_real**2 + noisy_imag**2).mean(axis=-1)
-    mag_den = np.sqrt(den_real**2 + den_imag**2).mean(axis=-1)
-    mag_orig_avg = orig_mag.mean(axis=-1)   # 원본도 평균
+    # magnitude 계산 (echo=0)
+    mag_noisy = np.sqrt(noisy_real[..., ECHO_IDX]**2 + noisy_imag[..., ECHO_IDX]**2)
+    mag_den = np.sqrt(den_real[..., ECHO_IDX]**2 + den_imag[..., ECHO_IDX]**2)
+    mag_orig_sel = orig_mag[..., ECHO_IDX]   # 원본도 echo=0 선택
     
     # diff 계산
-    diff_deno_orig = mag_den - mag_orig_avg
-    diff_noisy_orig = mag_noisy - mag_orig_avg
+    diff_deno_orig = mag_den - mag_orig_sel
+    diff_noisy_orig = mag_noisy - mag_orig_sel
     
     # 컬러 범위 설정
-    vmin, vmax = np.percentile(mag_orig_avg[mask], (1, 99))
+    vmin, vmax = np.percentile(mag_orig_sel[mask], (1, 99))
     diff_vmax = np.percentile(np.abs(diff_noisy_orig[mask]), 99)
     
     # 시각화
     fig, axes = plt.subplots(1, 5, figsize=(25, 5))
-    fig.suptitle(f"Noise Level {lvl} | Slice {Z_SLICE} | Echo-Averaged", fontsize=20)
+    fig.suptitle(f"Noise Level {lvl} | Slice {Z_SLICE} | Echo {ECHO_IDX}", fontsize=20)
 
     axes[0].imshow(mag_noisy[:, :, Z_SLICE], cmap='gray', vmin=vmin, vmax=vmax)
     axes[0].set_title('Noisy Magnitude')
@@ -70,7 +71,7 @@ for lvl in NOISE_LEVELS:
     axes[4].axis('off')
 
     plt.tight_layout(rect=[0, 0, 1, 0.93])
-    out_png = OUT_DIR / f"noise{lvl}_slice{Z_SLICE:03d}_echoavg.png"
+    out_png = OUT_DIR / f"noise{lvl}_slice{Z_SLICE:03d}_echo{ECHO_IDX:02d}.png"
     plt.savefig(out_png, dpi=300, bbox_inches="tight")
     plt.close()
     print(f"✔ 저장 → {out_png}")

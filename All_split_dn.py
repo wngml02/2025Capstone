@@ -53,7 +53,8 @@ def snr_diff_rician(ref, test, roi):
         mu   = ref[...,c][roi].mean()
         sigma_raw = (test[...,c] - ref[...,c])[roi].std(ddof=1) # 아직 미정정
         s_corr = np.sqrt(max(mu**2 - 2*sigma_raw**2, 0))
-        s.append(s_corr / sigma_raw)
+        snr_val = (s_corr / sigma_raw) * np.sqrt(2)
+        s.append(snr_val)
     return np.asarray(s)
 
 def ssim_echo(ref, test, roi):
@@ -106,8 +107,8 @@ def snr_slice_df(ref, test, roi, label):
         if not m2d.any(): continue
         for c in range(C):
             mu   = ref[:,:,z,c][m2d].mean()
-            sigma=(test[:,:,z,c]-ref[:,:,z,c])[m2d].std(ddof=1)/np.sqrt(2)
-            s_corr=np.sqrt(max(mu**2-2*sigma**2,0))
+            sigma=(test[:,:,z,c]-ref[:,:,z,c])[m2d].std(ddof=1)
+            s_corr=np.sqrt(max(mu**2-2*sigma**2,0)) * np.sqrt(2)
             rows.append({"Slice":z,"Echo":c,"{}".format(label):s_corr/sigma})
     return pd.DataFrame(rows)
 

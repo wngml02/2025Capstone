@@ -1,7 +1,7 @@
 
 
 orig_file   = "meas_gre_dir1.mat"              
-noisy_file  = "noisy_meas_gre_dir1_50.mat"     
+noisy_file  = "noisy_meas_gre_dir1/noisy_meas_gre_dir1_50.mat"     
 deno_file   = "denoised_real_imag_50_sqrt_r2.mat"   
 
 mask_key    = "mask_brain"      
